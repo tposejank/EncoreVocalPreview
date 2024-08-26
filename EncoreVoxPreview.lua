@@ -37,6 +37,7 @@ od_phrases = {}
 solo_markers = {}
 
 phrases = {}
+lyrics = {}
 -- tremolos = {}
 
 beatLines={}
@@ -1180,22 +1181,24 @@ local function Main()
 		local lyricTextsInCurPhrase = {}
 		local lyricsUntilThePHPoint = {}
 
-		for i = 1, #lyrics do
-			if lyrics[i][1] >= phrases[curPhrase][1] and lyrics[i][1] < phrases[curPhrase][2] then
-				-- if lyrics[i][2] ~= '+' then -- it doesnt work if the phrase ends with a + for some reason
-					-- reaper.ShowConsoleMsg(lyrics[i][2]..'\n')
-					table.insert(lyricTextsInCurPhrase, lyrics[i])
-
-					if i ~= #lyrics then
-						if lyrics[i + 1][1] > curTime then
+		if #phrases > 0 then
+			for i = 1, #lyrics do
+				if lyrics[i][1] >= phrases[curPhrase][1] and lyrics[i][1] < phrases[curPhrase][2] then
+					-- if lyrics[i][2] ~= '+' then -- it doesnt work if the phrase ends with a + for some reason
+						-- reaper.ShowConsoleMsg(lyrics[i][2]..'\n')
+						table.insert(lyricTextsInCurPhrase, lyrics[i])
+	
+						if i ~= #lyrics then
+							if lyrics[i + 1][1] > curTime then
+								table.insert(lyricsUntilThePHPoint, lyrics[i])
+							end
+						end
+	
+						if i == #lyrics then -- just add it
 							table.insert(lyricsUntilThePHPoint, lyrics[i])
 						end
-					end
-
-					if i == #lyrics then -- just add it
-						table.insert(lyricsUntilThePHPoint, lyrics[i])
-					end
-				-- end
+					-- end
+				end
 			end
 		end
 
