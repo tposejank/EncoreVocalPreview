@@ -338,7 +338,7 @@ function drawNotes()
 			local endy = (voxlineh - 3) + startyoff
 			local starty = startyoff
 			local notey = startyoff + (lane - pR[1]) * (starty - endy) / (pR[2] - pR[1]) + 25
-			reaper.ShowConsoleMsg('\n'.. notey)
+			--reaper.ShowConsoleMsg('\n'.. notey)
 			notexend = startxoff + (nyoff * rend)
 	
 			if stringstarts(text, '+') then -- connect with the previous note as the + means it continues it
