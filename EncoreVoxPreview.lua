@@ -1259,11 +1259,13 @@ local function Main()
 			gfx.drawstr(realCurrentlyDoing)
 		end
 
-		if curPhrase ~= #phrases then
+		if curPhrase ~= #phrases then -- stop sign one
 			local lyricTextsInTheNextPhrase = {}
 			for m = 1, #lyrics do
-				if lyrics[m][1] >= phrases[curPhrase+1][1] and lyrics[m][1] < phrases[curPhrase+1][2] then
-					table.insert(lyricTextsInTheNextPhrase, lyrics[m][2])
+				if #phrases > 1 then -- stop sign two
+					if lyrics[m][1] >= phrases[curPhrase+1][1] and lyrics[m][1] < phrases[curPhrase+1][2] then
+						table.insert(lyricTextsInTheNextPhrase, lyrics[m][2])
+					end
 				end
 			end
 
