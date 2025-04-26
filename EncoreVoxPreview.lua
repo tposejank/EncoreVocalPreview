@@ -14,7 +14,7 @@ midiHash=""
 beatHash=""
 eventsHash=""
 trackSpeed=2
-inst=4
+inst=5
 diff=4
 -- pixelsDrumline = 5
 -- hopothresh = 170 -- ticks
@@ -111,9 +111,11 @@ instrumentTracks={
 	{"PART VOCALS",findTrack("PART VOCALS")},
 	{"PART VOCAL",findTrack("PART VOCAL")},
 	{"PLASTIC VOCALS",findTrack("PLASTIC VOCALS")},
+	{"PRO VOCALS",findTrack("PRO VOCALS")},
 	{"PART VOCALS [Unpitched]",findTrack("PART VOCALS")},
 	{"PART VOCAL [Unpitched]",findTrack("PART VOCAL")},
 	{"PLASTIC VOCALS [Unpitched]",findTrack("PLASTIC VOCALS")},
+	{"PRO VOCALS [Unpitched]",findTrack("PRO VOCALS")},
 }
 
 eventTracks={
@@ -210,9 +212,11 @@ function updateMidi()
 		{"PART VOCALS",findTrack("PART VOCALS")},
 		{"PART VOCAL",findTrack("PART VOCAL")},
 		{"PLASTIC VOCALS",findTrack("PLASTIC VOCALS")},
+		{"PRO VOCALS",findTrack("PRO VOCALS")},
 		{"PART VOCALS [Unpitched]",findTrack("PART VOCALS")},
 		{"PART VOCAL [Unpitched]",findTrack("PART VOCAL")},
-		{"PLASTIC VOCALS [Unpitched]",findTrack("PLASTIC VOCALS")}
+		{"PLASTIC VOCALS [Unpitched]",findTrack("PLASTIC VOCALS")},
+		{"PRO VOCALS [Unpitched]",findTrack("PRO VOCALS")},
 	}
 	if instrumentTracks[inst][2] then
 		local numItems = reaper.CountTrackMediaItems(instrumentTracks[inst][2])
@@ -551,7 +555,7 @@ local function Main()
 	if keyBinds[char] then
         keyBinds[char]()
     end
-	isunpitchedmode = inst >= 4
+	isunpitchedmode = inst >= 5
 	if playState==1 then
 		curTime=reaper.GetPlayPosition()-offset
 	end
