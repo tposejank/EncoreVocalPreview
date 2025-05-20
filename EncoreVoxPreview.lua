@@ -1,8 +1,8 @@
 version_num="0.0.1"
 
 startxoff = 100
-voxlineh = 100
-startyoff = 200
+voxlineh = 120
+startyoff = 100
 
 phraserecth = 50
 
@@ -23,7 +23,11 @@ diff=4
 -- tremoloP = 126
 curOdPhrase = 0
 curPhrase = 0
+curHarmonyPhrase = {0,0,0}
 -- beatLineTimes = false
+Range={
+	60,60
+}
 pR={
 	36,84
 } --pitch ranges
@@ -33,6 +37,13 @@ aPP = 106
 
 offset=0
 notes={}
+harmonyNotes={
+	{},
+	{},
+	{}
+}
+harmonyPhrases={{},{},{}}
+harmonyLyrics={{},{},{}}
 od_phrases = {}
 solo_markers = {}
 
@@ -105,13 +116,17 @@ function findTrack(trackName)
 end
 
 gfx.clear = rgb2num(42, 0, 71)
-gfx.init("Encore Vox Preview", 640, 190, 0, 200, 200)
+gfx.init("Encore Vox Preview", 840, 240, 0, 200, 200)
 
 instrumentTracks={
 	{"PART VOCALS",findTrack("PART VOCALS")},
 	{"PART VOCAL",findTrack("PART VOCAL")},
 	{"PLASTIC VOCALS",findTrack("PLASTIC VOCALS")},
 	{"PRO VOCALS",findTrack("PRO VOCALS")},
+	{"HARMONY 1",findTrack("HARM1")},
+	{"HARMONY 2",findTrack("HARM2")},
+	{"HARMONY 3",findTrack("HARM3")},
+	{"HARMONIES",{findTrack("HARM3"),findTrack("HARM2"),findTrack("HARM1")}},
 	{"PART VOCALS [Unpitched]",findTrack("PART VOCALS")},
 	{"PART VOCAL [Unpitched]",findTrack("PART VOCAL")},
 	{"PLASTIC VOCALS [Unpitched]",findTrack("PLASTIC VOCALS")},
@@ -130,21 +145,29 @@ end
 local function notesCompare(a, b)
 	return a[1] < b[1]
 end
-function parseNotes(take)
+function parseNotes(take, harmony)
 	notes = {}
 	lyrics = {}
+	harmonyNotes[harmony] = {}
+	harmonyLyrics[harmony] = {}
 
 	_,_,_,textcount = reaper.MIDI_CountEvts(take)
 	for i = 0, textcount - 1 do
 		_,_,_,epos,etype,msg = reaper.MIDI_GetTextSysexEvt(take, i)
 		etime = reaper.MIDI_GetProjTimeFromPPQPos(take, epos)
 		if etype==5 or etype==1 and not stringstarts(msg, '[') then
-			table.insert(lyrics,{etime,msg})
+			if inst == 8 then
+				table.insert(harmonyLyrics[harmony],{etime,msg})
+			else
+				table.insert(lyrics,{etime,msg})
+			end
 		end
 	end
-
-	od_phrases={}
+	if harmony == 3 or harmony == 0 then
+		od_phrases={}
+	end
 	phrases = {}
+	harmonyPhrases[harmony] = {}
 
 	od=false
 	cur_od_phrase=1
@@ -158,53 +181,115 @@ function parseNotes(take)
 		ntimebeats = reaper.MIDI_GetProjQNFromPPQPos(take, spos)
 		nendbeats = reaper.MIDI_GetProjQNFromPPQPos(take, epos)
 		if pitch == oP then
-			table.insert(od_phrases, {ntime,nend})
+			if inst == 8 then 
+				if harmony == 3 then
+					table.insert(od_phrases, {ntime,nend})
+				end
+			else
+				table.insert(od_phrases, {ntime,nend})
+			end
 		elseif pitch == pP or pitch == aPP then
-			table.insert(phrases, {ntime,nend})
+			if inst == 8 then
+				table.insert(harmonyPhrases[harmony], {ntime,nend})
+			else
+				table.insert(phrases, {ntime,nend})
+			end
+			
 		elseif pitch >= pR[1] and pitch <= pR[2] then
 			local valid=true
-			local lane = pitch - pR[1]
-
-			lyricIndex = findLyric(ntime, lyrics)
+			local lane = pitch
+			if inst == 8 then
+				lyricIndex = findLyric(ntime, harmonyLyrics[harmony])
+			else
+				lyricIndex = findLyric(ntime, lyrics)
+			end
 			lyricMessage = ''
 			if lyricIndex == -1 then
 				valid = false
 			else
-				lyricMessage = lyrics[lyricIndex][2]
+				if inst == 8 then
+					lyricMessage = harmonyLyrics[harmony][lyricIndex][2]
+				else
+					lyricMessage = lyrics[lyricIndex][2]
+				end
 			end
-			table.insert(notes, {ntime, nend - ntime, lane, false, valid, lyricMessage, true}) -- last arg = render as a note
+			if Range[1]-5 > pitch-5 then
+				Range[1] = pitch-5
+			end
+			if Range[2]+5 < pitch+5 then
+				Range[2] = pitch+5
+			end
+			if inst == 8 then
+				table.insert(harmonyNotes[harmony], {ntime, nend - ntime, lane, false, valid, lyricMessage, true}) -- last arg = render as a note
+			else
+				table.insert(notes, {ntime, nend - ntime, lane, false, valid, lyricMessage, true}) -- last arg = render as a note
+			end
 		end
 	end
 
 	-- corrects lyrics
-	for j = 1, #lyrics do
-		local lyric = lyrics[j]
-		local time = lyric[1] 
-		local foundyet = false
-		for k = 1,#notes do
-			if notes[k][1] == time then
-				foundyet = true
+	if inst == 8 then
+		for j = 1, #harmonyLyrics[harmony] do
+			local lyric = harmonyLyrics[harmony][j]
+			local time = lyric[1] 
+			local foundyet = false
+			for k = 1,#harmonyNotes[harmony] do
+				if harmonyNotes[harmony][k][1] == time then
+					foundyet = true
 				-- reaper.ShowConsoleMsg('Found note for '..j)
-				break
+					break
+				end
+			end
+
+			if not foundyet then
+				table.insert(harmonyNotes[harmony], {time, 0, 0, false, valid, lyric[2], false})
 			end
 		end
+	else
+		for j = 1, #lyrics do
+			local lyric = lyrics[j]
+			local time = lyric[1] 
+			local foundyet = false
+			for k = 1,#notes do
+				if notes[k][1] == time then
+					foundyet = true
+				-- reaper.ShowConsoleMsg('Found note for '..j)
+					break
+				end
+			end
 
-		if not foundyet then
-			table.insert(notes, {time, 0, 0, false, valid, lyric[2], false})
+			if not foundyet then
+				table.insert(notes, {time, 0, 0, false, valid, lyric[2], false})
+			end
 		end
 	end
 
 	if #od_phrases~=0 then
-		for i=1,#notes do
-			if notes[i][1]>od_phrases[cur_od_phrase][2] then
-				if cur_od_phrase<#od_phrases then cur_od_phrase=cur_od_phrase+1 end
+		if inst == 8 then
+			for i=1,#harmonyNotes[harmony] do
+				if harmonyNotes[harmony][i][1]>od_phrases[cur_od_phrase][2] then
+					if cur_od_phrase<#od_phrases then cur_od_phrase=cur_od_phrase+1 end
+				end
+				if harmonyNotes[harmony][i][1]>=od_phrases[cur_od_phrase][1] and harmonyNotes[harmony][i][1]<od_phrases[cur_od_phrase][2] then
+					harmonyNotes[harmony][i][4]=true
+				end
 			end
-			if notes[i][1]>=od_phrases[cur_od_phrase][1] and notes[i][1]<od_phrases[cur_od_phrase][2] then
-				notes[i][4]=true
+		else
+			for i=1,#notes do
+				if notes[i][1]>od_phrases[cur_od_phrase][2] then
+					if cur_od_phrase<#od_phrases then cur_od_phrase=cur_od_phrase+1 end
+				end
+				if notes[i][1]>=od_phrases[cur_od_phrase][1] and notes[i][1]<od_phrases[cur_od_phrase][2] then
+					notes[i][4]=true
+				end
 			end
 		end
 	end
-	table.sort(notes,notesCompare)
+	if inst == 8 then
+		table.sort(harmonyNotes[harmony],notesCompare)
+	else
+		table.sort(notes,notesCompare)
+	end
 end
 
 function updateMidi()
@@ -213,19 +298,45 @@ function updateMidi()
 		{"PART VOCAL",findTrack("PART VOCAL")},
 		{"PLASTIC VOCALS",findTrack("PLASTIC VOCALS")},
 		{"PRO VOCALS",findTrack("PRO VOCALS")},
+		{"HARMONY 1",findTrack("HARM1")},
+		{"HARMONY 2",findTrack("HARM2")},
+		{"HARMONY 3",findTrack("HARM3")},
+		{"HARMONIES",{findTrack("HARM3"),findTrack("HARM2"),findTrack("HARM1")}},
 		{"PART VOCALS [Unpitched]",findTrack("PART VOCALS")},
 		{"PART VOCAL [Unpitched]",findTrack("PART VOCAL")},
 		{"PLASTIC VOCALS [Unpitched]",findTrack("PLASTIC VOCALS")},
-		{"PRO VOCALS [Unpitched]",findTrack("PRO VOCALS")},
+		{"PRO VOCALS [Unpitched]",findTrack("PRO VOCALS")}
 	}
-	if instrumentTracks[inst][2] then
+	if inst == 8 then
+		for h = 0, 3 do
+			if instrumentTracks[inst][2][h] then
+				local numItems = reaper.CountTrackMediaItems(instrumentTracks[inst][2][h])
+				for i = 0, numItems-1 do
+					local item = reaper.GetTrackMediaItem(instrumentTracks[inst][2][h], i)
+					local take = reaper.GetActiveTake(item)
+					local _,hash=reaper.MIDI_GetHash(take,false)-- true if only notes
+					if midiHash~=hash then
+						parseNotes(take,h)
+						curNote=1
+						for i=1,#harmonyNotes[h] do
+							curNote=i
+							if harmonyNotes[h][i][1]+harmonyNotes[h][i][2]>=curTime then
+								break
+							end
+						end
+						midiHash=hash
+					end
+				end
+			end
+		end
+	elseif instrumentTracks[inst][2] then
 		local numItems = reaper.CountTrackMediaItems(instrumentTracks[inst][2])
 		for i = 0, numItems-1 do
 			local item = reaper.GetTrackMediaItem(instrumentTracks[inst][2], i)
 			local take = reaper.GetActiveTake(item)
 			local _,hash=reaper.MIDI_GetHash(take,false)-- true if only notes
 			if midiHash~=hash then
-				parseNotes(take)
+				parseNotes(take,0)
 				curNote=1
 				for i=1,#notes do
 					curNote=i
@@ -303,53 +414,70 @@ function updateBeatLines()
 		beatLines={}
 	end
 end
+accidentals = {
+		[1] = true,  -- C# / Db
+		[3] = true,  -- D# / Eb
+		[6] = true,  -- F# / Gb
+		[8] = true,  -- G# / Ab
+		[10] = true  -- A# / Bb
+}
+function is_accidental(pitch)
+		return accidentals[pitch % 12] == true
+end
 
-function drawNotes()
+function drawNotes(noteArr, phraseArr, harmony)
 	-- isplastic = inst >= 5
 	-- isprodrums = inst == 5
 	-- isexpert = diff == 4
 	-- isriffmaster = inst >= 6
-
+	
 	if not isunpitchedmode then
-		for i=1,#notes do
+		for i=1,#noteArr do
 			invalid=false
-			ntime=notes[i][1]
-			nlen=notes[i][2]
+			talkie = false
+			ntime=noteArr[i][1]
+			nlen=noteArr[i][2]
 			local rtrackspeed = trackSpeed - 2.85
 			-- nlenbeats=notes[i][7]
-			if notes[i][5]==false then
+			if noteArr[i][5]==false then
 				invalid=true
 			end
-			lane=notes[i][3]
-			od=notes[i][4]
-			text=notes[i][6]
+			lane=noteArr[i][3]
+			od=noteArr[i][4]
+			text=noteArr[i][6]
 			text = string.gsub(text, "=", "-") -- ignores the equal sing
-	
-			canrender = notes[i][7]
+			text = string.gsub(text, "%$", "")
+
+			canrender = noteArr[i][7]
 			
 			-- a random note with render set to false means it is invalid
 			-- however, if the text ends in # means its unpitched therefore not invalid
 			if not text:find('#') and not canrender then
 				invalid = true
 			end
+			if text:find('#') then 
+				talkie = true
+			end
 	
 			text = string.gsub(text, "#", "") -- ignores the hashtag sign
-	
+			
+
 			rtime=((ntime-curTime)*(rtrackspeed+2))
 			rend=(((ntime+nlen)-curTime)*(rtrackspeed+2))
 
 			local notex = startxoff + (nyoff * rtime)
 			local endy = (voxlineh - 3) + startyoff
 			local starty = startyoff
-			local notey = startyoff + (lane - pR[1]) * (starty - endy) / (pR[2] - pR[1]) + 25
+			local notey = endy + (lane - Range[1]) * (starty - endy) / (Range[2] - Range[1])
 			--reaper.ShowConsoleMsg('\n'.. notey)
 			notexend = startxoff + (nyoff * rend)
-	
+			
+			
 			if stringstarts(text, '+') then -- connect with the previous note as the + means it continues it
-				if #notes >= 2 then
+				if #noteArr >= 2 then
 					text = string.gsub(text, "+", "")
 	
-					prev = notes[i-1]
+					prev = noteArr[i-1]
 	
 					lastinvalid=false
 					lastntime=prev[1]
@@ -364,15 +492,25 @@ function drawNotes()
 					if not lasttext:find('#') and not lastcanrender then
 						lastinvalid = true
 					end
+					if text:find('#') then 
+						talkie = true
+					end
 					lastrtime=((lastntime-curTime)*(rtrackspeed+2))
 					lastrend=(((lastntime+lastnlen)-curTime)*(rtrackspeed+2))
 	
 					local lastendy = (voxlineh - 3) + startyoff
 					local laststarty = startyoff
-					local lastnotey = startyoff + (lastlane - pR[1]) * (laststarty - lastendy) / (pR[2] - pR[1]) + 25
+					local lastnotey = lastendy + (lastlane - Range[1]) * (laststarty - lastendy) / (Range[2] - Range[1])
 					lastnotexend = startxoff + (nyoff * lastrend)
 	
-					gfx.r, gfx.g, gfx.b = 0.8, 0, 0.8
+					if inst == 5 or (inst == 8 and harmony == 3) then
+						gfx.r, gfx.g, gfx.b=.02,.8,.9
+					elseif inst == 6 or harmony == 2 then
+						gfx.r, gfx.g, gfx.b=1,1,0
+					elseif inst == 7 or harmony == 1 then
+						gfx.r, gfx.g, gfx.b=1,.5,0
+					end
+
 					if lastod then
 						gfx.r, gfx.g, gfx.b=.53,.6,.77
 					end
@@ -396,19 +534,41 @@ function drawNotes()
 				if od then
 					gfx.r, gfx.g, gfx.b=.53,.6,.77
 				end
-	
+				if inst == 5 or (inst == 8 and harmony == 3) then
+						gfx.r, gfx.g, gfx.b=.02,.8,.9
+					elseif inst == 6 or harmony == 2 then
+						gfx.r, gfx.g, gfx.b=1,1,0
+					elseif inst == 7 or harmony == 1 then
+						gfx.r, gfx.g, gfx.b=1,.5,0
+				end
+
 				if invalid then
 					gfx.r, gfx.g, gfx.b=1,0,0
 				end
 				if notexend > 0 and notex < gfx.w then -- offscreen
-					if canrender then
+					heightThing = (startyoff + voxlineh)
+					heightToAdd = 3
+					if harmony == 2 then
+						heightToAdd = 25 + 3
+					elseif harmony == 1 then
+						heightToAdd = 50 + 3
+					end
+					if canrender and not talkie then
 						gfx.line(notex,notey,notexend,notey)
 						gfx.line(notex,notey+1,notexend,notey+1)
 						gfx.line(notex,notey+2,notexend,notey+2)
+						
 					end
-	
+					if talkie then 
+						gfx.a = 0.25
+						gfx.rect(notex,startyoff,notexend-notex,voxlineh)
+						gfx.a = 1
+					end
+
+					
+
 					if od then
-						gfx.r, gfx.g, gfx.b=.53,.6,.77
+						gfx.r, gfx.g, gfx.b=.77,.60,.0
 						local pos = {
 							{-1, -1},
 							{-1, 0},
@@ -419,15 +579,36 @@ function drawNotes()
 							{1, -1},
 							{0, -1},
 						}
+						gfx.a = 0.5
+						gfx.rect(notex,heightThing+heightToAdd,notexend-notex,22)
+						gfx.a = 1
 						for i = 1, 8 do
-							gfx.setfont(1, "Arial", 20)
-							gfx.x,gfx.y=notex + pos[i][1], (startyoff + voxlineh + 5) + pos[i][2]
+							if talkie then
+								gfx.setfont(1, "Segoe UI Italic", 20, 'i')
+							else
+								gfx.setfont(1, "Segoe UI", 20)
+							end
+							gfx.x,gfx.y=notex + pos[i][1]+2, (startyoff + voxlineh + 5) + pos[i][2]
 							gfx.drawstr(text)
 						end
+					else
+						gfx.a = 0.25
+						gfx.rect(notex,heightThing+heightToAdd,notexend-notex,22)
+						gfx.a = 1
 					end
-	
-					gfx.x,gfx.y=notex,startyoff + voxlineh + 5
-					gfx.setfont(1, "Arial", 20)
+					
+					if harmony == 3 or harmony == 0 then
+						gfx.x,gfx.y=notex+2,startyoff + voxlineh + 5
+					elseif harmony == 2 then
+						gfx.x,gfx.y=notex+2,startyoff + voxlineh + 25 + 5
+					elseif harmony == 1 then
+						gfx.x,gfx.y=notex+2,startyoff + voxlineh + 25 + 25 + 5
+					end
+					if talkie then
+						gfx.setfont(1, "Segoe UI Italic", 20)
+					else
+						gfx.setfont(1, "Segoe UI", 20)
+					end
 					if not invalid then gfx.r, gfx.g, gfx.b = 1, 1, 1 end
 					gfx.drawstr(text)
 				end
@@ -436,8 +617,8 @@ function drawNotes()
 	end
 
 	if not isunpitchedmode then
-		for i=1,#phrases do
-			ntime=phrases[i][2]
+		for i=1,#phraseArr do
+			ntime=phraseArr[i][2]
 			-- nlen=phrases[i][2]
 			local rtrackspeed = trackSpeed - 2.85
 	
@@ -447,7 +628,19 @@ function drawNotes()
 			--
 	
 			if --[[rend>=-0.05]] true then
-				gfx.r, gfx.g, gfx.b = 0.81, 0.37, 0.81
+				gfx.a = 0.5
+				addedHeight = 0
+				if harmony == 3 then
+					gfx.r, gfx.g, gfx.b = .02,.6,.7
+				elseif harmony == 2 then
+					addedHeight = 25
+					gfx.r, gfx.g, gfx.b = 1, 1, 0
+				elseif harmony == 1 then
+					addedHeight = 50
+					gfx.r, gfx.g, gfx.b = 1,.5,0
+				else
+					gfx.r, gfx.g, gfx.b = 0.81, 0.37, 0.81
+				end
 	
 				phrasey = startyoff
 				phrasex = startxoff + (nyoff * rtime)
@@ -457,25 +650,26 @@ function drawNotes()
 	
 				if phrasex > -3 and phrasex < gfx.w then -- offscreen
 					for j = 1,3 do
-						gfx.line(phrasex+j,phrasey,phrasex+j,phrasey + voxlineh + addy)
+						gfx.line(phrasex+j,phrasey,phrasex+j,phrasey + voxlineh + addy + addedHeight)
 					end
 				end
+				gfx.a = 1
 			end
 		end
 	end
 end
 
 function moveCursorByBeats(increment)
-    local currentPosition = reaper.GetCursorPosition()
-    local currentBeats = reaper.TimeMap2_timeToQN(reaper.EnumProjects(-1), currentPosition)
+		local currentPosition = reaper.GetCursorPosition()
+		local currentBeats = reaper.TimeMap2_timeToQN(reaper.EnumProjects(-1), currentPosition)
 
-    -- Calculate the new position in beats
+		-- Calculate the new position in beats
 	local newBeats = currentBeats + increment
 	newBeats=math.floor(newBeats*(1/quants[movequant])+0.5)/(1/quants[movequant])
 	-- Convert the new beats position to seconds
-    local newPosition = reaper.TimeMap2_QNToTime(reaper.EnumProjects(-1), newBeats)
-    -- Move the edit cursor to the new position
-    reaper.SetEditCurPos2(0, newPosition, true, true)
+		local newPosition = reaper.TimeMap2_QNToTime(reaper.EnumProjects(-1), newBeats)
+		-- Move the edit cursor to the new position
+		reaper.SetEditCurPos2(0, newPosition, true, true)
 end
 
 updateMidi()
@@ -531,18 +725,18 @@ keyBinds={
 }
 
 function findMissingElements(table1, table2)
-    local result = {}
-    local table2Set = {}
-    for _, v in ipairs(table2) do
-        table2Set[v] = true
-    end
-    for _, v in ipairs(table1) do
-        if not table2Set[v] then
-            table.insert(result, v)
-        end
-    end
+		local result = {}
+		local table2Set = {}
+		for _, v in ipairs(table2) do
+				table2Set[v] = true
+		end
+		for _, v in ipairs(table1) do
+				if not table2Set[v] then
+						table.insert(result, v)
+				end
+		end
 
-    return result
+		return result
 end
 
 local function Main()
@@ -553,9 +747,9 @@ local function Main()
 	end
 	playState=reaper.GetPlayState()
 	if keyBinds[char] then
-        keyBinds[char]()
-    end
-	isunpitchedmode = inst >= 5
+				keyBinds[char]()
+		end
+	isunpitchedmode = inst >= 9
 	if playState==1 then
 		curTime=reaper.GetPlayPosition()-offset
 	end
@@ -579,32 +773,42 @@ local function Main()
 			curOdPhrase = i
 		end
 	end
-	curPhrase=1
-	for i=1,#phrases do
-		if phrases[i][1] <= curTime then
-			curPhrase = i
+	if inst == 8 then
+		for h=0,3 do 
+			curHarmonyPhrase[h] = 1
+			for i=1,#harmonyPhrases[h] do
+				if harmonyPhrases[h][i][1] <= curTime then
+					curHarmonyPhrase[h] = i
+				end
+			end
+		end
+	else
+		curPhrase=1
+		for i=1,#phrases do
+			if phrases[i][1] <= curTime then
+				curPhrase = i
+			end
 		end
 	end
 
-	startyoff = (gfx.h / 2) - (voxlineh / 2)
+	
+
+	startyoff = (gfx.h - gfx.h) + 20
 	gfx.r, gfx.g, gfx.b = 0.4, 0, 0.4
 	
 	if not isunpitchedmode then
-		gfx.rect(0, startyoff, gfx.w, voxlineh + 25)
-
-		-- draw the gray line thingy
-		gfx.r, gfx.g, gfx.b = 0.59, 0.12, 0.59
-		gfx.line(startxoff, startyoff, startxoff, startyoff + voxlineh)
-		gfx.line(startxoff + 1, startyoff, startxoff + 1, startyoff + voxlineh)
+		if inst == 8 then 
+			gfx.rect(0, startyoff, gfx.w, voxlineh)
+			gfx.r, gfx.g, gfx.b = .0,.3,.4
+			gfx.rect(0, startyoff + voxlineh, gfx.w, 25)
+			gfx.r, gfx.g, gfx.b = 0.4, 0.4, 0
+			gfx.rect(0, startyoff + voxlineh + 25, gfx.w, 25)
+			gfx.r, gfx.g, gfx.b = 0.4,.2,0
+			gfx.rect(0, startyoff + voxlineh + 50, gfx.w, 25)
+		else
+			gfx.rect(0, startyoff, gfx.w, voxlineh + 25)
+		end
 	
-		-- draw the line corners
-		gfx.rect(startxoff - 5, startyoff, 13, 3)
-		gfx.rect(startxoff - 3, startyoff + 3, 9, 3)
-		gfx.rect(startxoff - 1, startyoff + 6, 5, 3)
-	
-		gfx.rect(startxoff - 5, (startyoff + voxlineh) - 3, 13, 3)
-		gfx.rect(startxoff - 3, (startyoff + voxlineh) - 6, 9, 3)
-		gfx.rect(startxoff - 1, (startyoff + voxlineh) - 9, 5, 3)
 	
 		gfx.r, gfx.g, gfx.b = 0.32, 0, 0.32
 	
@@ -612,6 +816,10 @@ local function Main()
 		gfx.rect(0, startyoff-3, gfx.w, 3)
 		gfx.rect(0, startyoff + voxlineh, gfx.w, 3)
 		gfx.rect(0, startyoff + voxlineh + 25, gfx.w, 3)
+		if inst == 8 then
+			gfx.rect(0, startyoff + voxlineh + 50, gfx.w, 3)
+			gfx.rect(0, startyoff + voxlineh + 75, gfx.w, 3)
+		end
 	else
 		startyoff = (gfx.h / 2) - (phraserecth / 2)
 
@@ -625,7 +833,7 @@ local function Main()
 		
 
 		gfx.r, gfx.g, gfx.b = 1,1,1
-		gfx.setfont(1, "Arial", 25)
+		gfx.setfont(1, "Segoe UI", 25)
 
 		local lyricTextsInCurPhrase = {}
 		local lyricsUntilThePHPoint = {}
@@ -732,7 +940,7 @@ local function Main()
 			gfx.rect(calcx, startyoff + phraserecth + nextphraserecth, gfx.w - (gfx.w/3), 3)
 
 			gfx.r, gfx.g, gfx.b = 0.8,0.8,0.8
-			gfx.setfont(1, "Arial", 20)
+			gfx.setfont(1, "Segoe UI", 20)
 
 			pstrx2,pstrx2 = gfx.measurestr(nextphrasetext)
 
@@ -745,9 +953,35 @@ local function Main()
 	updateEvents()
 	updateMidi()
 	updateBeatLines()
-	drawNotes()
+
+	if not isunpitchedmode then
+		for pitchLine = Range[1], Range[2] do
+			if (math.floor(pitchLine / 12) % 2) == 0 then
+				gfx.r, gfx.g, gfx.b = 0.4, 0.4, 0.4
+				gfx.a = 0.4
+			else
+				gfx.r, gfx.g, gfx.b = 0.3, 0.3, 0.3
+				gfx.a = 0.6
+			end 
+			local starty = startyoff
+			local endy = (voxlineh - 3) + startyoff
+			local pitchy = endy + (pitchLine - Range[1]) * (starty - endy) / (Range[2] - Range[1])
+			gfx.line(0,pitchy+1,gfx.w,pitchy+1)
+			gfx.line(0,pitchy,gfx.w,pitchy)
+			gfx.line(0,pitchy+2,gfx.w,pitchy+2)
+			gfx.a = 1
+		end
+	end
+	if inst == 8 then
+		for i = 0, 3 do
+			drawNotes(harmonyNotes[i], harmonyPhrases[i], i)
+		end
+	else
+		drawNotes(notes, phrases, 0)
+	end
+	
 	gfx.x,gfx.y=0,0
-	gfx.setfont(1, "Arial", 15)
+	gfx.setfont(1, "Segoe UI", 15)
 	gfx.r, gfx.g, gfx.b = 1, 1, 1
 	if not isunpitchedmode then
 		gfx.drawstr(string.format(
@@ -758,6 +992,15 @@ local function Main()
 			curNote,
 			tostring(#notes)
 		))
+		gragaghag = 28
+		if inst == 8 then
+			gragaghag = 78
+		end
+		gfx.r, gfx.g, gfx.b = 1, 0.0, 1
+		gfx.line(startxoff, startyoff - 4, startxoff, startyoff + voxlineh + gragaghag)
+		gfx.line(startxoff + 1, startyoff - 4, startxoff + 1, startyoff + voxlineh + gragaghag)
+		gfx.line(startxoff - 1, startyoff - 4, startxoff - 1, startyoff + voxlineh + gragaghag)
+	
 	else
 		gfx.drawstr(string.format(
 			[[%s ---- Syllable: %d/%d
@@ -775,13 +1018,13 @@ local function Main()
 		toFractionString(quants[movequant]),
 		offset,
 		trackSpeed)
-	--gfx.setfont(1, "Arial", 15)
+	--gfx.setfont(1, "Segoe UI", 15)
 	strx,stry = gfx.measurestr(stuff)
 	gfx.x,gfx.y=gfx.w-strx,0
 	gfx.r, gfx.g, gfx.b = 1, 1, 1
 	gfx.drawstr(stuff)
 	gfx.x,gfx.y=0,gfx.h-15
-	gfx.setfont(1, "Arial", 15)
+	gfx.setfont(1, "Segoe UI", 15)
 	gfx.drawstr(string.format("v%s",version_num))
 	strx,stry=gfx.measurestr("[F1] Controls")
 	gfx.x,gfx.y=gfx.w-strx,gfx.h-stry
@@ -793,7 +1036,7 @@ local function Main()
 		gfx.rect(0,0,gfx.w,gfx.h)
 		gfx.r,gfx.g,gfx.b,gfx.a=1,1,1,1
 		gfx.x,gfx.y=0,320*imgScale
-		gfx.setfont(1, "Arial", 15)
+		gfx.setfont(1, "Segoe UI", 15)
 
 		local HELP = [[Change track type: [ / ]
 		Change track speed: + / -
