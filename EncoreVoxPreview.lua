@@ -1,4 +1,4 @@
-version_num="0.0.1"
+version_num="0.0.2"
 
 startxoff = 100
 voxlineh = 120
