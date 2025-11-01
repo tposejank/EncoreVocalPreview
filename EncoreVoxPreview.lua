@@ -14,7 +14,7 @@ midiHash=""
 beatHash=""
 eventsHash=""
 trackSpeed=2
-inst=8
+inst=5
 diff=4
 -- pixelsDrumline = 5
 -- hopothresh = 170 -- ticks
@@ -506,9 +506,11 @@ function drawNotes(noteArr, phraseArr, harmony)
 					if inst == 5 or (inst == 8 and harmony == 3) then
 						gfx.r, gfx.g, gfx.b=.02,.8,.9
 					elseif inst == 6 or harmony == 2 then
-						gfx.r, gfx.g, gfx.b=1,1,0
-					elseif inst == 7 or harmony == 1 then
+						-- Harmony 2: use orange (was yellow)
 						gfx.r, gfx.g, gfx.b=1,.5,0
+					elseif inst == 7 or harmony == 1 then
+						-- Harmony 3: use yellow (was orange)
+						gfx.r, gfx.g, gfx.b=1,1,0
 					end
 
 					if lastod then
@@ -537,9 +539,11 @@ function drawNotes(noteArr, phraseArr, harmony)
 				if inst == 5 or (inst == 8 and harmony == 3) then
 						gfx.r, gfx.g, gfx.b=.02,.8,.9
 					elseif inst == 6 or harmony == 2 then
-						gfx.r, gfx.g, gfx.b=1,1,0
-					elseif inst == 7 or harmony == 1 then
+						-- Harmony 2: use orange (was yellow)
 						gfx.r, gfx.g, gfx.b=1,.5,0
+					elseif inst == 7 or harmony == 1 then
+						-- Harmony 3: use yellow (was orange)
+						gfx.r, gfx.g, gfx.b=1,1,0
 				end
 
 				if invalid then
@@ -627,17 +631,19 @@ function drawNotes(noteArr, phraseArr, harmony)
 	
 			--
 	
-			if --[[rend>=-0.05]] true then
+				if --[[rend>=-0.05]] true then
 				gfx.a = 0.5
 				addedHeight = 0
 				if harmony == 3 then
 					gfx.r, gfx.g, gfx.b = .02,.6,.7
 				elseif harmony == 2 then
 					addedHeight = 25
-					gfx.r, gfx.g, gfx.b = 1, 1, 0
+					-- Harmony 2: use orange (was yellow)
+					gfx.r, gfx.g, gfx.b = 1,.5,0
 				elseif harmony == 1 then
 					addedHeight = 50
-					gfx.r, gfx.g, gfx.b = 1,.5,0
+					-- Harmony 3: use yellow (was orange)
+					gfx.r, gfx.g, gfx.b = 1, 1, 0
 				else
 					gfx.r, gfx.g, gfx.b = 0.81, 0.37, 0.81
 				end
@@ -801,9 +807,11 @@ local function Main()
 			gfx.rect(0, startyoff, gfx.w, voxlineh)
 			gfx.r, gfx.g, gfx.b = .0,.3,.4
 			gfx.rect(0, startyoff + voxlineh, gfx.w, 25)
-			gfx.r, gfx.g, gfx.b = 0.4, 0.4, 0
+			-- Harmony 2/3 swap: middle bar = orange (was yellow)
+			gfx.r, gfx.g, gfx.b = 0.4, .2, 0
 			gfx.rect(0, startyoff + voxlineh + 25, gfx.w, 25)
-			gfx.r, gfx.g, gfx.b = 0.4,.2,0
+			-- Harmony 2/3 swap: bottom bar = yellow (was orange)
+			gfx.r, gfx.g, gfx.b = 0.4, 0.4, 0
 			gfx.rect(0, startyoff + voxlineh + 50, gfx.w, 25)
 		else
 			gfx.rect(0, startyoff, gfx.w, voxlineh + 25)
