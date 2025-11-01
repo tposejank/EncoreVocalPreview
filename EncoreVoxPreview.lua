@@ -586,13 +586,23 @@ function drawNotes(noteArr, phraseArr, harmony)
 						gfx.a = 0.5
 						gfx.rect(notex,heightThing+heightToAdd,notexend-notex,22)
 						gfx.a = 1
+						
+						local lyricY = 0
+						if harmony == 3 or harmony == 0 then
+							lyricY = (startyoff + voxlineh + 5)
+						elseif harmony == 2 then
+							lyricY = (startyoff + voxlineh + 25 + 5)
+						elseif harmony == 1 then
+							lyricY = (startyoff + voxlineh + 25 + 25 + 5)
+						end
+
 						for i = 1, 8 do
 							if talkie then
 								gfx.setfont(1, "Segoe UI Italic", 20, 'i')
 							else
 								gfx.setfont(1, "Segoe UI", 20)
 							end
-							gfx.x,gfx.y=notex + pos[i][1]+2, (startyoff + voxlineh + 5) + pos[i][2]
+							gfx.x,gfx.y=notex + pos[i][1]+2, lyricY + pos[i][2]
 							gfx.drawstr(text)
 						end
 					else
