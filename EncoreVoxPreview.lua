@@ -452,14 +452,14 @@ function drawNotes(noteArr, phraseArr, harmony)
 			
 			-- a random note with render set to false means it is invalid
 			-- however, if the text ends in # means its unpitched therefore not invalid
-			if not text:find('#') and not canrender then
+			if not text:find('#') and not text:find('%^') and not canrender then
 				invalid = true
 			end
-			if text:find('#') then 
+			if text:find('#') or text:find('%^') then 
 				talkie = true
 			end
 	
-			text = string.gsub(text, "#", "") -- ignores the hashtag sign
+			text = string.gsub(text, "[#%^]", "") -- ignores the hashtag sign
 			
 
 			rtime=((ntime-curTime)*(rtrackspeed+2))
@@ -489,10 +489,10 @@ function drawNotes(noteArr, phraseArr, harmony)
 					lastod=prev[4]
 					lasttext=prev[6]
 					lastcanrender = prev[7]
-					if not lasttext:find('#') and not lastcanrender then
+					if not lasttext:find('#') and not lasttext:find('%^') and not lastcanrender then
 						lastinvalid = true
 					end
-					if text:find('#') then 
+					if text:find('#') or text:find('%^') then 
 						talkie = true
 					end
 					lastrtime=((lastntime-curTime)*(rtrackspeed+2))
