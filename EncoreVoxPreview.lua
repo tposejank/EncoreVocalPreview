@@ -14,7 +14,7 @@ midiHash=""
 beatHash=""
 eventsHash=""
 trackSpeed=2
-inst=5
+inst=8
 diff=4
 -- pixelsDrumline = 5
 -- hopothresh = 170 -- ticks
@@ -44,6 +44,10 @@ harmonyNotes={
 }
 harmonyPhrases={{},{},{}}
 harmonyLyrics={{},{},{}}
+-- ensure index 0 exists (script uses harmony index 0 in some code paths)
+harmonyNotes[0] = harmonyNotes[0] or {}
+harmonyPhrases[0] = harmonyPhrases[0] or {}
+harmonyLyrics[0] = harmonyLyrics[0] or {}
 od_phrases = {}
 solo_markers = {}
 
@@ -506,10 +510,8 @@ function drawNotes(noteArr, phraseArr, harmony)
 					if inst == 5 or (inst == 8 and harmony == 3) then
 						gfx.r, gfx.g, gfx.b=.02,.8,.9
 					elseif inst == 6 or harmony == 2 then
-						-- Harmony 2: use orange (was yellow)
 						gfx.r, gfx.g, gfx.b=1,.5,0
 					elseif inst == 7 or harmony == 1 then
-						-- Harmony 3: use yellow (was orange)
 						gfx.r, gfx.g, gfx.b=1,1,0
 					end
 
@@ -539,10 +541,8 @@ function drawNotes(noteArr, phraseArr, harmony)
 				if inst == 5 or (inst == 8 and harmony == 3) then
 						gfx.r, gfx.g, gfx.b=.02,.8,.9
 					elseif inst == 6 or harmony == 2 then
-						-- Harmony 2: use orange (was yellow)
 						gfx.r, gfx.g, gfx.b=1,.5,0
 					elseif inst == 7 or harmony == 1 then
-						-- Harmony 3: use yellow (was orange)
 						gfx.r, gfx.g, gfx.b=1,1,0
 				end
 
@@ -807,10 +807,8 @@ local function Main()
 			gfx.rect(0, startyoff, gfx.w, voxlineh)
 			gfx.r, gfx.g, gfx.b = .0,.3,.4
 			gfx.rect(0, startyoff + voxlineh, gfx.w, 25)
-			-- Harmony 2/3 swap: middle bar = orange (was yellow)
 			gfx.r, gfx.g, gfx.b = 0.4, .2, 0
 			gfx.rect(0, startyoff + voxlineh + 25, gfx.w, 25)
-			-- Harmony 2/3 swap: bottom bar = yellow (was orange)
 			gfx.r, gfx.g, gfx.b = 0.4, 0.4, 0
 			gfx.rect(0, startyoff + voxlineh + 50, gfx.w, 25)
 		else
