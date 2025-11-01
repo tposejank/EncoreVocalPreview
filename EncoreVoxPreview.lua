@@ -655,8 +655,20 @@ function drawNotes(noteArr, phraseArr, harmony)
 				-- reaper.ShowConsoleMsg(phrasey..' '..phrasex..'\n')
 	
 				if phrasex > -3 and phrasex < gfx.w then -- offscreen
+					local drawStartY = phrasey
+					local drawEndY = phrasey + voxlineh + addy + addedHeight
+					-- In harmonies view (inst == 8), confine phrase markers to their own track's vertical space.
+					if inst == 8 then
+						if harmony == 1 then -- Yellow (Harmony 3)
+							drawStartY = startyoff + voxlineh + 50
+							drawEndY = startyoff + voxlineh + 75
+						elseif harmony == 2 then -- Orange (Harmony 2)
+							drawStartY = startyoff + voxlineh + 25
+							drawEndY = startyoff + voxlineh + 50
+						end
+					end
 					for j = 1,3 do
-						gfx.line(phrasex+j,phrasey,phrasex+j,phrasey + voxlineh + addy + addedHeight)
+						gfx.line(phrasex+j, drawStartY, phrasex+j, drawEndY)
 					end
 				end
 				gfx.a = 1
