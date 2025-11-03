@@ -125,7 +125,7 @@ gfx.init("Encore Vox Preview", 840, 240, 0, 200, 200)
 instrumentTracks={
 	{"PART VOCALS",findTrack("PART VOCALS")},
 	{"PART VOCAL",findTrack("PART VOCAL")},
-	{"PLASTIC VOCALS",findTrack("PLASTIC VOCALS")},
+	{"PITCHED VOCALS",findTrack("PITCHED VOCALS")},
 	{"PRO VOCALS",findTrack("PRO VOCALS")},
 	{"HARMONY 1",findTrack("HARM1")},
 	{"HARMONY 2",findTrack("HARM2")},
@@ -133,7 +133,7 @@ instrumentTracks={
 	{"HARMONIES",{findTrack("HARM3"),findTrack("HARM2"),findTrack("HARM1")}},
 	{"PART VOCALS [Unpitched]",findTrack("PART VOCALS")},
 	{"PART VOCAL [Unpitched]",findTrack("PART VOCAL")},
-	{"PLASTIC VOCALS [Unpitched]",findTrack("PLASTIC VOCALS")},
+	{"PITCHED VOCALS [Unpitched]",findTrack("PITCHED VOCALS")},
 	{"PRO VOCALS [Unpitched]",findTrack("PRO VOCALS")},
 }
 
@@ -300,7 +300,7 @@ function updateMidi()
 	instrumentTracks={
 		{"PART VOCALS",findTrack("PART VOCALS")},
 		{"PART VOCAL",findTrack("PART VOCAL")},
-		{"PLASTIC VOCALS",findTrack("PLASTIC VOCALS")},
+		{"PITCHED VOCALS",findTrack("PITCHED VOCALS")},
 		{"PRO VOCALS",findTrack("PRO VOCALS")},
 		{"HARMONY 1",findTrack("HARM1")},
 		{"HARMONY 2",findTrack("HARM2")},
@@ -308,7 +308,7 @@ function updateMidi()
 		{"HARMONIES",{findTrack("HARM3"),findTrack("HARM2"),findTrack("HARM1")}},
 		{"PART VOCALS [Unpitched]",findTrack("PART VOCALS")},
 		{"PART VOCAL [Unpitched]",findTrack("PART VOCAL")},
-		{"PLASTIC VOCALS [Unpitched]",findTrack("PLASTIC VOCALS")},
+		{"PITCHED VOCALS [Unpitched]",findTrack("PITCHED VOCALS")},
 		{"PRO VOCALS [Unpitched]",findTrack("PRO VOCALS")}
 	}
 	if inst == 8 then
@@ -1081,3 +1081,4 @@ local function Main()
 end
 
 Main()
+
