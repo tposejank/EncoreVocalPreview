@@ -14,7 +14,7 @@ midiHash=""
 beatHash=""
 eventsHash=""
 trackSpeed=2
-inst=5
+inst=8
 diff=4
 -- pixelsDrumline = 5
 -- hopothresh = 170 -- ticks
@@ -44,6 +44,10 @@ harmonyNotes={
 }
 harmonyPhrases={{},{},{}}
 harmonyLyrics={{},{},{}}
+-- ensure index 0 exists (script uses harmony index 0 in some code paths)
+harmonyNotes[0] = harmonyNotes[0] or {}
+harmonyPhrases[0] = harmonyPhrases[0] or {}
+harmonyLyrics[0] = harmonyLyrics[0] or {}
 od_phrases = {}
 solo_markers = {}
 
@@ -452,14 +456,14 @@ function drawNotes(noteArr, phraseArr, harmony)
 			
 			-- a random note with render set to false means it is invalid
 			-- however, if the text ends in # means its unpitched therefore not invalid
-			if not text:find('#') and not canrender then
+			if not text:find('#') and not text:find('%^') and not canrender then
 				invalid = true
 			end
-			if text:find('#') then 
+			if text:find('#') or text:find('%^') then 
 				talkie = true
 			end
 	
-			text = string.gsub(text, "#", "") -- ignores the hashtag sign
+			text = string.gsub(text, "[#%^]", "") -- ignores the hashtag sign
 			
 
 			rtime=((ntime-curTime)*(rtrackspeed+2))
@@ -489,10 +493,10 @@ function drawNotes(noteArr, phraseArr, harmony)
 					lastod=prev[4]
 					lasttext=prev[6]
 					lastcanrender = prev[7]
-					if not lasttext:find('#') and not lastcanrender then
+					if not lasttext:find('#') and not lasttext:find('%^') and not lastcanrender then
 						lastinvalid = true
 					end
-					if text:find('#') then 
+					if text:find('#') or text:find('%^') then 
 						talkie = true
 					end
 					lastrtime=((lastntime-curTime)*(rtrackspeed+2))
@@ -506,9 +510,9 @@ function drawNotes(noteArr, phraseArr, harmony)
 					if inst == 5 or (inst == 8 and harmony == 3) then
 						gfx.r, gfx.g, gfx.b=.02,.8,.9
 					elseif inst == 6 or harmony == 2 then
-						gfx.r, gfx.g, gfx.b=1,1,0
-					elseif inst == 7 or harmony == 1 then
 						gfx.r, gfx.g, gfx.b=1,.5,0
+					elseif inst == 7 or harmony == 1 then
+						gfx.r, gfx.g, gfx.b=1,1,0
 					end
 
 					if lastod then
@@ -537,9 +541,9 @@ function drawNotes(noteArr, phraseArr, harmony)
 				if inst == 5 or (inst == 8 and harmony == 3) then
 						gfx.r, gfx.g, gfx.b=.02,.8,.9
 					elseif inst == 6 or harmony == 2 then
-						gfx.r, gfx.g, gfx.b=1,1,0
-					elseif inst == 7 or harmony == 1 then
 						gfx.r, gfx.g, gfx.b=1,.5,0
+					elseif inst == 7 or harmony == 1 then
+						gfx.r, gfx.g, gfx.b=1,1,0
 				end
 
 				if invalid then
@@ -582,13 +586,23 @@ function drawNotes(noteArr, phraseArr, harmony)
 						gfx.a = 0.5
 						gfx.rect(notex,heightThing+heightToAdd,notexend-notex,22)
 						gfx.a = 1
+						
+						local lyricY = 0
+						if harmony == 3 or harmony == 0 then
+							lyricY = (startyoff + voxlineh + 5)
+						elseif harmony == 2 then
+							lyricY = (startyoff + voxlineh + 25 + 5)
+						elseif harmony == 1 then
+							lyricY = (startyoff + voxlineh + 25 + 25 + 5)
+						end
+
 						for i = 1, 8 do
 							if talkie then
 								gfx.setfont(1, "Segoe UI Italic", 20, 'i')
 							else
 								gfx.setfont(1, "Segoe UI", 20)
 							end
-							gfx.x,gfx.y=notex + pos[i][1]+2, (startyoff + voxlineh + 5) + pos[i][2]
+							gfx.x,gfx.y=notex + pos[i][1]+2, lyricY + pos[i][2]
 							gfx.drawstr(text)
 						end
 					else
@@ -627,17 +641,19 @@ function drawNotes(noteArr, phraseArr, harmony)
 	
 			--
 	
-			if --[[rend>=-0.05]] true then
+				if --[[rend>=-0.05]] true then
 				gfx.a = 0.5
 				addedHeight = 0
 				if harmony == 3 then
 					gfx.r, gfx.g, gfx.b = .02,.6,.7
 				elseif harmony == 2 then
 					addedHeight = 25
-					gfx.r, gfx.g, gfx.b = 1, 1, 0
+					-- Harmony 2: use orange (was yellow)
+					gfx.r, gfx.g, gfx.b = 1,.5,0
 				elseif harmony == 1 then
 					addedHeight = 50
-					gfx.r, gfx.g, gfx.b = 1,.5,0
+					-- Harmony 3: use yellow (was orange)
+					gfx.r, gfx.g, gfx.b = 1, 1, 0
 				else
 					gfx.r, gfx.g, gfx.b = 0.81, 0.37, 0.81
 				end
@@ -649,8 +665,20 @@ function drawNotes(noteArr, phraseArr, harmony)
 				-- reaper.ShowConsoleMsg(phrasey..' '..phrasex..'\n')
 	
 				if phrasex > -3 and phrasex < gfx.w then -- offscreen
+					local drawStartY = phrasey
+					local drawEndY = phrasey + voxlineh + addy + addedHeight
+					-- In harmonies view (inst == 8), confine phrase markers to their own track's vertical space.
+					if inst == 8 then
+						if harmony == 1 then -- Yellow (Harmony 3)
+							drawStartY = startyoff + voxlineh + 50
+							drawEndY = startyoff + voxlineh + 75
+						elseif harmony == 2 then -- Orange (Harmony 2)
+							drawStartY = startyoff + voxlineh + 25
+							drawEndY = startyoff + voxlineh + 50
+						end
+					end
 					for j = 1,3 do
-						gfx.line(phrasex+j,phrasey,phrasex+j,phrasey + voxlineh + addy + addedHeight)
+						gfx.line(phrasex+j, drawStartY, phrasex+j, drawEndY)
 					end
 				end
 				gfx.a = 1
@@ -801,9 +829,9 @@ local function Main()
 			gfx.rect(0, startyoff, gfx.w, voxlineh)
 			gfx.r, gfx.g, gfx.b = .0,.3,.4
 			gfx.rect(0, startyoff + voxlineh, gfx.w, 25)
-			gfx.r, gfx.g, gfx.b = 0.4, 0.4, 0
+			gfx.r, gfx.g, gfx.b = 0.4, .2, 0
 			gfx.rect(0, startyoff + voxlineh + 25, gfx.w, 25)
-			gfx.r, gfx.g, gfx.b = 0.4,.2,0
+			gfx.r, gfx.g, gfx.b = 0.4, 0.4, 0
 			gfx.rect(0, startyoff + voxlineh + 50, gfx.w, 25)
 		else
 			gfx.rect(0, startyoff, gfx.w, voxlineh + 25)
